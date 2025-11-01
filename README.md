@@ -4,7 +4,6 @@ A Java Swing-based desktop application that converts between USD and INR currenc
 
 ![Java](https://img.shields.io/badge/Java-8+-orange?style=flat&logo=java)
 ![Swing](https://img.shields.io/badge/GUI-Swing-blue?style=flat)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat)
 ![API](https://img.shields.io/badge/API-Frankfurter-yellow?style=flat)
 
 ## Features ✨
