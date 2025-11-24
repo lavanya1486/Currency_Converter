@@ -151,5 +151,3 @@ Example response:
 ***
 
 *Made with ❤️ by Lavanya*
-
-***
