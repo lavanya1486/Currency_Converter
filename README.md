@@ -153,5 +153,3 @@ Example response:
 *Made with ❤️ by Lavanya*
 
 ***
-
-This updated README reflects the latest multi-currency support, UI enhancements, and system tray integration provided in the Java Swing code you shared. Let me know if you need sample usage tips or more code explanations!
