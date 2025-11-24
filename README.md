@@ -2,7 +2,9 @@
 
 A Java Swing-based desktop application that converts currencies (USD, INR, EUR, GBP, JPY) in real-time using exchange rates fetched from the Frankfurter API.
 
-![Java](https://img.shields.io/badge/Java-8+-orangehttps://img.shields.io/badge/GUI-Swing-bluehttps://img.shields.io/badge/API-Frankfurter ✨
+![Java](https://img.shields.io/badge/Java-8+-orange?style=flat&logo=java)
+![Swing](https://img.shields.io/badge/GUI-Swing-blue?style=flat)
+![API](https://img.shields.io/badge/API-Frankfurter-yellow?style=flat)
 
 - 🔄 **Real-time exchange rate fetching** using Frankfurter API for multiple currencies (USD, INR, EUR, GBP, JPY)
 - 💵 **Bidirectional conversion** with selectable "From" and "To" currencies
