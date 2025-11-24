@@ -1,94 +1,162 @@
 import javax.swing.*;
+import java.awt.*;
+import java.awt.datatransfer.*;
 import java.awt.event.*;
 import java.net.*;
 import java.io.*;
 import com.google.gson.*;
 
 public class Currency_Converter {
-    private static double currentRate = 87.82;
+    private static double currentRate = 1.0;
+    private static final String[] currencies = {"USD", "INR", "EUR", "GBP", "JPY"};
+    private static JFrame frame;
+    private static JLabel labelRate;
+    private static JComboBox<String> comboFrom;
+    private static JComboBox<String> comboTo;
+    private static JTextField textFrom;
+    private static JTextField textTo;
+    private static JButton btnToggleTheme;
+    private static boolean darkMode = false;
+    private static SystemTray tray;
+    private static TrayIcon trayIcon;
 
-    public static void main(String[] args){
-        fetchExchangeRate();
-
-        JFrame frame = new JFrame("Currency Converter");
-        JLabel labelINR = new JLabel("INR:");
-        labelINR.setBounds(50, 50, 100, 30);
-        JTextField textINR = new JTextField();
-        textINR.setBounds(150, 50, 100, 30);
-
-        JLabel labelUSD = new JLabel("USD:");
-        labelUSD.setBounds(50, 100, 100, 30);
-        JTextField textUSD = new JTextField();
-        textUSD.setBounds(150, 100, 100, 30);
-
-        JLabel labelRate = new JLabel("Rate: 1 USD = " + String.format("%.2f", currentRate) + " INR");
-        labelRate.setBounds(50, 20, 250, 25);
-        frame.add(labelRate);
-
-        JButton btnINRtoUSD = new JButton("Convert INR to USD");
-        btnINRtoUSD.setBounds(50, 150, 200, 30);
-        btnINRtoUSD.addActionListener(e -> {
-            try {
-                double inr = Double.parseDouble(textINR.getText());
-                double usd = inr / currentRate;
-                textUSD.setText(String.format("%.2f", usd));
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame, "Please enter a valid number!");
-            }
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            setupUI();
+            fetchAndUpdateRate();
+            setupSystemTray();
         });
+    }
 
-        JButton btnUSDtoINR = new JButton("Convert USD to INR");
-        btnUSDtoINR.setBounds(50, 200, 200, 30);
-        btnUSDtoINR.addActionListener(e -> {
-            try {
-                double usd = Double.parseDouble(textUSD.getText());
-                double inr = usd * currentRate;
-                textINR.setText(String.format("%.2f", inr));
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame, "Please enter a valid number!");
-            }
-        });
+    private static void setupUI() {
+        frame = new JFrame("Currency Converter");
+        frame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+        frame.setMinimumSize(new Dimension(460, 320));
+        frame.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5,5,5,5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
+        gbc.gridx = 0; gbc.gridy = 0;
+        frame.add(new JLabel("From:"), gbc);
+        comboFrom = new JComboBox<>(currencies);
+        comboFrom.setSelectedItem("USD");
+        gbc.gridx = 1; gbc.gridy = 0; gbc.gridwidth = 2;
+        frame.add(comboFrom, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 1;
+        frame.add(new JLabel("To:"), gbc);
+        comboTo = new JComboBox<>(currencies);
+        comboTo.setSelectedItem("INR");
+        gbc.gridx = 1; gbc.gridy = 1; gbc.gridwidth = 2;
+        frame.add(comboTo, gbc);
+
+        labelRate = new JLabel("Rate: -");
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 3;
+        frame.add(labelRate, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 1;
+        frame.add(new JLabel("Amount:"), gbc);
+        textFrom = new JTextField();
+        gbc.gridx = 1; gbc.gridy = 3; gbc.gridwidth = 2;
+        frame.add(textFrom, gbc);
+        JButton btnCopyFrom = new JButton("Copy");
+        gbc.gridx = 3; gbc.gridy = 3; gbc.gridwidth = 1;
+        frame.add(btnCopyFrom, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 1;
+        frame.add(new JLabel("Converted:"), gbc);
+        textTo = new JTextField();
+        textTo.setEditable(false);
+        gbc.gridx = 1; gbc.gridy = 4; gbc.gridwidth = 2;
+        frame.add(textTo, gbc);
+        JButton btnCopyTo = new JButton("Copy");
+        gbc.gridx = 3; gbc.gridy = 4; gbc.gridwidth = 1;
+        frame.add(btnCopyTo, gbc);
+
+        JButton btnConvert = new JButton("Convert");
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1;
+        frame.add(btnConvert, gbc);
+        JButton btnSwap = new JButton("Swap");
+        gbc.gridx = 1; gbc.gridy = 5; gbc.gridwidth = 1;
+        frame.add(btnSwap, gbc);
         JButton btnRefresh = new JButton("Refresh Rate");
-        btnRefresh.setBounds(260, 150, 80, 80);
+        gbc.gridx = 2; gbc.gridy = 5; gbc.gridwidth = 1;
+        frame.add(btnRefresh, gbc);
+
+        btnToggleTheme = new JButton("Switch to Dark Mode");
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 3;
+        frame.add(btnToggleTheme, gbc);
+
+        // Event listeners
+        comboFrom.addActionListener(e -> {
+            fetchAndUpdateRate();
+            textTo.setText("");
+        });
+        comboTo.addActionListener(e -> {
+            fetchAndUpdateRate();
+            textTo.setText("");
+        });
+        btnConvert.addActionListener(e -> {
+            try {
+                double amountFrom = Double.parseDouble(textFrom.getText());
+                double amountTo = amountFrom * currentRate;
+                textTo.setText(String.format("%.4f", amountTo));
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(frame, "Please enter a valid number!");
+            }
+        });
+        btnSwap.addActionListener(e -> {
+            int fromIndex = comboFrom.getSelectedIndex();
+            int toIndex = comboTo.getSelectedIndex();
+            comboFrom.setSelectedIndex(toIndex);
+            comboTo.setSelectedIndex(fromIndex);
+            textFrom.setText("");
+            textTo.setText("");
+            fetchAndUpdateRate();
+        });
         btnRefresh.addActionListener(e -> {
             btnRefresh.setEnabled(false);
             btnRefresh.setText("...");
             new Thread(() -> {
-                fetchExchangeRate();
+                fetchAndUpdateRate();
                 SwingUtilities.invokeLater(() -> {
-                    labelRate.setText("Rate: 1 USD = " + String.format("%.2f", currentRate) + " INR");
                     btnRefresh.setText("Refresh Rate");
                     btnRefresh.setEnabled(true);
                     JOptionPane.showMessageDialog(frame, "Exchange rate updated!");
                 });
             }).start();
         });
-        frame.add(btnRefresh);
+        btnCopyFrom.addActionListener(e -> {
+            String text = textFrom.getText();
+            if (!text.isEmpty()) copyToClipboard(text);
+        });
+        btnCopyTo.addActionListener(e -> {
+            String text = textTo.getText();
+            if (!text.isEmpty()) copyToClipboard(text);
+        });
+        btnToggleTheme.addActionListener(e -> toggleTheme());
 
-        frame.add(labelINR);
-        frame.add(textINR);
-        frame.add(labelUSD);
-        frame.add(textUSD);
-        frame.add(btnINRtoUSD);
-        frame.add(btnUSDtoINR);
-
-        frame.setSize(370, 300);
-        frame.setLayout(null);
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
-    private static void fetchExchangeRate() {
+    private static void fetchAndUpdateRate() {
+        String fromCurrency = (String) comboFrom.getSelectedItem();
+        String toCurrency = (String) comboTo.getSelectedItem();
+        if (fromCurrency.equals(toCurrency)) {
+            currentRate = 1.0;
+            labelRate.setText("Rate: 1 " + fromCurrency + " = 1 " + toCurrency);
+            return;
+        }
         try {
-            String urlStr = "https://api.frankfurter.app/latest?from=USD&to=INR";
+            String urlStr = "https://api.frankfurter.app/latest?from=" + fromCurrency + "&to=" + toCurrency;
             URL url = new URL(urlStr);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.connect();
 
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder response = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
@@ -99,13 +167,93 @@ public class Currency_Converter {
             JsonParser parser = new JsonParser();
             JsonObject jsonObj = parser.parse(response.toString()).getAsJsonObject();
             JsonObject rates = jsonObj.getAsJsonObject("rates");
-            currentRate = rates.get("INR").getAsDouble();
+            currentRate = rates.get(toCurrency).getAsDouble();
 
-            System.out.println("Exchange rate updated: 1 USD = " + currentRate + " INR");
-
+            SwingUtilities.invokeLater(() ->
+                    labelRate.setText("Rate: 1 " + fromCurrency + " = " +
+                            String.format("%.4f", currentRate) + " " + toCurrency));
         } catch (Exception e) {
+            SwingUtilities.invokeLater(() -> labelRate.setText("Failed to fetch rate."));
+            currentRate = 1.0;
             System.out.println("Failed to fetch exchange rate. Using default rate.");
             e.printStackTrace();
         }
+    }
+
+    private static void copyToClipboard(String text) {
+        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
+        JOptionPane.showMessageDialog(null, "Copied to clipboard: " + text);
+    }
+
+    private static void toggleTheme() {
+        if (!darkMode) {
+            frame.getContentPane().setBackground(Color.DARK_GRAY);
+            setComponentColors(frame.getContentPane(), Color.LIGHT_GRAY, Color.DARK_GRAY);
+            btnToggleTheme.setText("Switch to Light Mode");
+            darkMode = true;
+        } else {
+            frame.getContentPane().setBackground(Color.WHITE);
+            setComponentColors(frame.getContentPane(), Color.BLACK, Color.WHITE);
+            btnToggleTheme.setText("Switch to Dark Mode");
+            darkMode = false;
+        }
+    }
+
+    private static void setComponentColors(Container container, Color fg, Color bg) {
+        for (Component comp : container.getComponents()) {
+            comp.setForeground(fg);
+            comp.setBackground(bg);
+            if (comp instanceof Container) {
+                setComponentColors((Container) comp, fg, bg);
+            }
+        }
+    }
+
+    private static void setupSystemTray() {
+        if (!SystemTray.isSupported()) return;
+        tray = SystemTray.getSystemTray();
+        Image image = Toolkit.getDefaultToolkit().createImage("icon.png"); // Change to your icon file
+
+        PopupMenu popup = new PopupMenu();
+        MenuItem openItem = new MenuItem("Open");
+        MenuItem exitItem = new MenuItem("Exit");
+
+        openItem.addActionListener(e -> {
+            SwingUtilities.invokeLater(() -> {
+                frame.setVisible(true);
+                frame.setExtendedState(JFrame.NORMAL);
+                tray.remove(trayIcon);
+            });
+        });
+        exitItem.addActionListener(e -> {
+            tray.remove(trayIcon);
+            System.exit(0);
+        });
+        popup.add(openItem);
+        popup.addSeparator();
+        popup.add(exitItem);
+
+        trayIcon = new TrayIcon(image, "Currency Converter", popup);
+        trayIcon.setImageAutoSize(true);
+        trayIcon.addActionListener(e -> {
+            SwingUtilities.invokeLater(() -> {
+                frame.setVisible(true);
+                frame.setExtendedState(JFrame.NORMAL);
+                tray.remove(trayIcon);
+            });
+        });
+        try {
+            tray.add(trayIcon);
+        } catch (AWTException e) {
+            System.err.println("TrayIcon could not be added.");
+        }
+        frame.addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowIconified(java.awt.event.WindowEvent e) {
+                frame.setVisible(false);
+            }
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                frame.setVisible(false);
+            }
+        });
     }
 }
