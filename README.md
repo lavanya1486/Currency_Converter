@@ -2,7 +2,9 @@
 
 A modern, easy-to-use desktop currency converter built with Java Swing. Instantly convert between popular currencies—USD, INR, EUR, GBP, and JPY—using real-time rates from the Frankfurter API.
 
-![Java](https://img.shields.io/badge/Java-8+-orangehttps://img.shields.io/badge/GUI-Swing-bluehttps://img.shields.io/badge/API-Frankfurter
+![Java](https://img.shields.io/badge/Java-8+-orange?style=flat&logo=java)
+![Swing](https://img.shields.io/badge/GUI-Swing-blue?style=flat)
+![API](https://img.shields.io/badge/API-Frankfurter-yellow?style=flat)
 
 ### Features 
 
